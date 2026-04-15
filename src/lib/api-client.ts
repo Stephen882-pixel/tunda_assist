@@ -3,9 +3,6 @@ import { mockCommissionData, mockLeads } from './mock-data';
 
 // Mock API client — replace with real fetch calls when integrating
 export class ApiClient {
-  // Will be used when integrating real backend APIs
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private readonly baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
   async getCommissionData(period: CommissionPeriod): Promise<CommissionData> {
     return new Promise((resolve) => {

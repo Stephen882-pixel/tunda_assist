@@ -1,10 +1,9 @@
-import { Intent, IntentDetectionResult, CommissionPeriod } from './types';
+import { IntentDetectionResult, CommissionPeriod } from './types';
 
 export class IntentDetector {
   private commissionKeywords = ['commission', 'earnings', 'income', 'revenue', 'payout', 'check'];
   private breakdownKeywords = ['breakdown', 'detailed', 'detail', 'how much', 'where', 'from'];
   private leadKeywords = ['lead', 'customer', 'prospect', 'client', 'contact', 'person'];
-  private statusKeywords = ['status', 'where', 'how', 'check'];
   private periodKeywords: Record<CommissionPeriod, string[]> = {
     '14_days': ['14', 'two weeks', '2 weeks'],
     '30_days': ['30', 'month', 'one month'],

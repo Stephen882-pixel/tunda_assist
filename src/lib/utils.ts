@@ -6,7 +6,7 @@ export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-export function formatCurrency(amount: number, currency: string = 'KES'): string {
+export function formatCurrency(amount: number, _currency: string = 'KES'): string {
   return `Kshs ${new Intl.NumberFormat('en-KE', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
