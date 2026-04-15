@@ -3,42 +3,76 @@ import { CommissionData, LeadStatus } from './types';
 export const mockCommissionData: Record<string, CommissionData> = {
   '14_days': {
     period: '14_days',
-    amount: 3500,
+    totalCommission: 3500,
+    transportCommission: 1500,
+    salesCommission: 2000,
     currency: 'KES',
-    details: [
-      { date: '2024-01-10', description: 'Sales commission', amount: 1800 },
-      { date: '2024-01-15', description: 'Referral bonus', amount: 1000 },
-      { date: '2024-01-18', description: 'Performance bonus', amount: 700 },
+    salesBreakdown: [
+      { customer: 'Jack Odhiambo', amount: 800 },
+      { customer: 'Maina Kamau', amount: 650 },
+      { customer: 'Sarah Wanjiku', amount: 550 },
+    ],
+    transportBreakdown: [
+      { week: 'Week 1 (Jan 6 – Jan 12)', amount: 700 },
+      { week: 'Week 2 (Jan 13 – Jan 19)', amount: 800 },
     ],
   },
   '30_days': {
     period: '30_days',
-    amount: 7200,
+    totalCommission: 7200,
+    transportCommission: 3200,
+    salesCommission: 4000,
     currency: 'KES',
-    details: [
-      { date: '2024-01-05', description: 'Sales commission', amount: 4000 },
-      { date: '2024-01-12', description: 'Referral bonus', amount: 2000 },
-      { date: '2024-01-25', description: 'Performance bonus', amount: 1200 },
+    salesBreakdown: [
+      { customer: 'Jack Odhiambo', amount: 1200 },
+      { customer: 'Maina Kamau', amount: 1000 },
+      { customer: 'Sarah Wanjiku', amount: 900 },
+      { customer: 'Peter Njoroge', amount: 900 },
+    ],
+    transportBreakdown: [
+      { week: 'Week 1 (Dec 25 – Dec 31)', amount: 750 },
+      { week: 'Week 2 (Jan 1 – Jan 7)', amount: 800 },
+      { week: 'Week 3 (Jan 8 – Jan 14)', amount: 850 },
+      { week: 'Week 4 (Jan 15 – Jan 21)', amount: 800 },
     ],
   },
   '60_days': {
     period: '60_days',
-    amount: 15600,
+    totalCommission: 15600,
+    transportCommission: 6600,
+    salesCommission: 9000,
     currency: 'KES',
-    details: [
-      { date: '2023-12-01', description: 'Sales commission', amount: 8500 },
-      { date: '2023-12-15', description: 'Referral bonus', amount: 4200 },
-      { date: '2024-01-10', description: 'Performance bonus', amount: 2900 },
+    salesBreakdown: [
+      { customer: 'Jack Odhiambo', amount: 2800 },
+      { customer: 'Maina Kamau', amount: 2200 },
+      { customer: 'Sarah Wanjiku', amount: 1800 },
+      { customer: 'Peter Njoroge', amount: 1200 },
+      { customer: 'Grace Akinyi', amount: 1000 },
+    ],
+    transportBreakdown: [
+      { week: 'Week 1–2', amount: 1600 },
+      { week: 'Week 3–4', amount: 1700 },
+      { week: 'Week 5–6', amount: 1650 },
+      { week: 'Week 7–8', amount: 1650 },
     ],
   },
   '90_days': {
     period: '90_days',
-    amount: 25800,
+    totalCommission: 25800,
+    transportCommission: 10800,
+    salesCommission: 15000,
     currency: 'KES',
-    details: [
-      { date: '2023-11-05', description: 'Sales commission', amount: 14000 },
-      { date: '2023-12-01', description: 'Referral bonus', amount: 7500 },
-      { date: '2024-01-05', description: 'Performance bonus', amount: 4300 },
+    salesBreakdown: [
+      { customer: 'Jack Odhiambo', amount: 4500 },
+      { customer: 'Maina Kamau', amount: 3800 },
+      { customer: 'Sarah Wanjiku', amount: 3000 },
+      { customer: 'Peter Njoroge', amount: 2200 },
+      { customer: 'Grace Akinyi', amount: 1500 },
+    ],
+    transportBreakdown: [
+      { week: 'Month 1', amount: 3500 },
+      { week: 'Month 2', amount: 3600 },
+      { week: 'Month 3', amount: 3700 },
     ],
   },
 };

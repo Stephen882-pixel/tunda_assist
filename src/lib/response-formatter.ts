@@ -1,186 +1,135 @@
-import { Intent, CommissionData, LeadStatus, MessageOption } from './types';
+import { CommissionData, LeadStatus, MessageOption } from './types';
 import { formatCurrency, getPeriodLabel } from './utils';
 
 export class ResponseFormatter {
+  // ── Step 2: Ask which period ──
+  formatPeriodSelection(): { message: string; options: MessageOption[] } {
+    const message = 'Please select a commission period:';
+    const options: MessageOption[] = [
+      { id: 'p_14', label: '14 days', value: '14_days' },
+      { id: 'p_30', label: '30 days', value: '30_days' },
+      { id: 'p_60', label: '60 days', value: '60_days' },
+      { id: 'p_90', label: '90 days', value: '90_days' },
+      { id: 'p_custom', label: 'Custom', value: 'custom' },
+    ];
+    return { message, options };
+  }
+
+  // ── Step 6: Commission summary ──
   formatCommissionSummary(data: CommissionData): { message: string; options: MessageOption[] } {
     const periodLabel = getPeriodLabel(data.period);
-    const amount = formatCurrency(data.amount, data.currency);
+    const total = formatCurrency(data.totalCommission, data.currency);
+    const transport = formatCurrency(data.transportCommission, data.currency);
+    const sales = formatCurrency(data.salesCommission, data.currency);
 
-    const message = `Commission amount for the ${periodLabel} is ${amount}`;
+    const message =
+      `Commission amount for ${periodLabel} is ${total}\n` +
+      `Total transport: ${transport}\n` +
+      `Total sales commission: ${sales}`;
 
+    // Step 7: ask for breakdown
     const options: MessageOption[] = [
-      {
-        id: 'breakdown',
-        label: 'Breakdown',
-        value: 'breakdown',
-        action: 'select_option',
-      },
-      {
-        id: 'other',
-        label: 'Something else',
-        value: 'other',
-        action: 'show_options',
-      },
+      { id: 'breakdown_yes', label: 'Yes', value: 'breakdown_yes' },
+      { id: 'breakdown_no', label: 'No', value: 'breakdown_no' },
     ];
 
     return { message, options };
   }
 
-  formatCommissionBreakdown(data: CommissionData, details?: any[]): { message: string; options: MessageOption[] } {
+  // ── Ask "would you like a breakdown?" label ──
+  formatBreakdownPrompt(): { message: string; options: MessageOption[] } {
+    const message = 'Would you like a breakdown of the above?';
+    const options: MessageOption[] = [
+      { id: 'breakdown_yes', label: 'Yes', value: 'breakdown_yes' },
+      { id: 'breakdown_no', label: 'No', value: 'breakdown_no' },
+    ];
+    return { message, options };
+  }
+
+  // ── Step 8: Detailed breakdown ──
+  formatCommissionBreakdown(data: CommissionData): { message: string; options: MessageOption[] } {
     const periodLabel = getPeriodLabel(data.period);
-    const amount = formatCurrency(data.amount, data.currency);
 
-    let detailsText = '';
-    if (details && details.length > 0) {
-      detailsText = '\n\nBreakdown:\n' + details.map(d => `• ${d.description}: ${formatCurrency(d.amount)}`).join('\n');
-    }
+    let msg = `📊 Commission Breakdown for ${periodLabel}\n\n`;
 
-    const message = `Commission breakdown for ${periodLabel}:\nTotal: ${amount}${detailsText}`;
+    msg += '💰 Sales Commissions:\n';
+    data.salesBreakdown.forEach((s) => {
+      msg += `  • ${s.customer}: ${formatCurrency(s.amount, data.currency)}\n`;
+    });
 
+    msg += '\n🚛 Transport Commissions:\n';
+    data.transportBreakdown.forEach((t) => {
+      msg += `  • ${t.week}: ${formatCurrency(t.amount, data.currency)}\n`;
+    });
+
+    // Step 10: Was this helpful?
+    const options: MessageOption[] = [];
+
+    return { message: msg.trim(), options };
+  }
+
+  // ── Step 10: Feedback ──
+  formatFeedbackPrompt(): { message: string; options: MessageOption[] } {
+    const message = 'Was this helpful?';
     const options: MessageOption[] = [
-      {
-        id: 'check_commission_periods',
-        label: 'Check commission periods',
-        value: 'check_commission_periods',
-        action: 'show_options',
-      },
-      {
-        id: 'check_customers',
-        label: 'Check customers or Leads',
-        value: 'check_customers',
-        action: 'show_options',
-      },
-      {
-        id: 'calculate_commissions',
-        label: 'Calculate Commissions',
-        value: 'calculate_commissions',
-        action: 'show_options',
-      },
-      {
-        id: 'check_breakdown',
-        label: 'Check a break down of commissions',
-        value: 'check_breakdown',
-        action: 'show_options',
-      },
+      { id: 'helpful_yes', label: 'Yes', value: 'helpful_yes' },
+      { id: 'helpful_no', label: 'No', value: 'helpful_no' },
     ];
-
     return { message, options };
   }
 
+  // ── Feedback received ──
+  formatFeedbackThanks(positive: boolean): { message: string; options: MessageOption[] } {
+    const message = positive
+      ? 'Glad I could help! 😊 What else would you like to check?'
+      : 'Sorry about that. Let me know how I can help better. What would you like to do?';
+    const options: MessageOption[] = [
+      { id: 'check_commissions', label: 'Check my commissions', value: 'commissions' },
+      { id: 'check_leads', label: 'Check customer or Leads', value: 'leads' },
+      { id: 'calculate', label: 'Calculate Commissions', value: 'calculate' },
+    ];
+    return { message, options };
+  }
+
+  // ── Lead flow: ask for identifier ──
+  formatLeadIdPrompt(): { message: string; options: MessageOption[] } {
+    const message = 'Please enter the customer/lead identifier (name, phone, email, or ID):';
+    return { message, options: [] };
+  }
+
+  // ── Lead status result ──
   formatLeadStatus(lead: LeadStatus): { message: string; options: MessageOption[] } {
-    const message = `Lead: ${lead.leadName}\nStatus: ${lead.status}\nLast Contact: ${lead.lastContact}${
-      lead.conversionValue ? `\nConversion Value: ${formatCurrency(lead.conversionValue)}` : ''
-    }`;
+    const message =
+      `👤 Lead: ${lead.leadName}\n` +
+      `📌 Status: ${lead.status}\n` +
+      `📅 Last Contact: ${lead.lastContact}` +
+      (lead.conversionValue ? `\n💰 Conversion Value: ${formatCurrency(lead.conversionValue)}` : '') +
+      (lead.notes ? `\n📝 Notes: ${lead.notes}` : '');
 
-    const options: MessageOption[] = [
-      {
-        id: 'check_commission_periods',
-        label: 'Check commission periods',
-        value: 'check_commission_periods',
-        action: 'show_options',
-      },
-      {
-        id: 'check_customers',
-        label: 'Check customers or Leads',
-        value: 'check_customers',
-        action: 'show_options',
-      },
-      {
-        id: 'calculate_commissions',
-        label: 'Calculate Commissions',
-        value: 'calculate_commissions',
-        action: 'show_options',
-      },
-      {
-        id: 'check_breakdown',
-        label: 'Check a break down of commissions',
-        value: 'check_breakdown',
-        action: 'show_options',
-      },
-    ];
-
+    const options: MessageOption[] = [];
     return { message, options };
   }
 
+  // ── Greeting ──
   formatGreeting(): { message: string; options: MessageOption[] } {
     const message =
-      'Hi there! I\'m Tunda Assist, your AI commission assistant. What would you like to check?';
-
+      "Hi there! I'm Tunda Assist, your AI commission assistant. What would you like to check?";
     const options: MessageOption[] = [
-      {
-        id: 'check_commissions',
-        label: 'Check my commissions',
-        value: 'commissions',
-        action: 'select_option',
-      },
-      {
-        id: 'check_leads',
-        label: 'Check customer or Leads',
-        value: 'leads',
-        action: 'select_option',
-      },
-      {
-        id: 'calculate',
-        label: 'Calculate Commissions',
-        value: 'calculate',
-        action: 'select_option',
-      },
+      { id: 'check_commissions', label: 'Check my commissions', value: 'commissions' },
+      { id: 'check_leads', label: 'Check customer or Leads', value: 'leads' },
+      { id: 'calculate', label: 'Calculate Commissions', value: 'calculate' },
     ];
-
     return { message, options };
   }
 
-  formatCustomQuestion(question: string): { message: string; options: MessageOption[] } {
-    const message = `I understand you're asking about: "${question}". I can help you with:\n\n1. Check commission periods\n2. Check customers or Leads\n3. Calculate Commissions\n4. Check a break down of commissions\n\nWhich would you prefer?`;
-
-    const options: MessageOption[] = [
-      {
-        id: 'check_commission_periods',
-        label: 'Check commission periods',
-        value: 'check_commission_periods',
-        action: 'show_options',
-      },
-      {
-        id: 'check_customers',
-        label: 'Check customers or Leads',
-        value: 'check_customers',
-        action: 'show_options',
-      },
-      {
-        id: 'calculate_commissions',
-        label: 'Calculate Commissions',
-        value: 'calculate_commissions',
-        action: 'show_options',
-      },
-      {
-        id: 'check_breakdown',
-        label: 'Check a break down of commissions',
-        value: 'check_breakdown',
-        action: 'show_options',
-      },
-    ];
-
-    return { message, options };
-  }
-
+  // ── Unknown ──
   formatUnknown(): { message: string; options: MessageOption[] } {
-    const message = "I didn't quite understand that. Can you rephrase your question?";
-
+    const message = "I didn't quite understand that. What would you like to do?";
     const options: MessageOption[] = [
-      {
-        id: 'commissions',
-        label: 'Check my commissions',
-        value: 'commissions',
-        action: 'select_option',
-      },
-      {
-        id: 'leads',
-        label: 'Check customers or Leads',
-        value: 'leads',
-        action: 'select_option',
-      },
+      { id: 'check_commissions', label: 'Check my commissions', value: 'commissions' },
+      { id: 'check_leads', label: 'Check customer or Leads', value: 'leads' },
+      { id: 'calculate', label: 'Calculate Commissions', value: 'calculate' },
     ];
-
     return { message, options };
   }
 }

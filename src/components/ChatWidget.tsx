@@ -1,12 +1,23 @@
 import React, { useState, useCallback } from 'react';
-import { Message, MessageOption, Intent, ChatState } from '../lib/types';
+import { Message, MessageOption, CommissionPeriod, ChatState } from '../lib/types';
 import { generateId } from '../lib/utils';
-import { intentDetector } from '../lib/intent-detector';
 import { responseFormatter } from '../lib/response-formatter';
 import { apiClient } from '../lib/api-client';
-import { mockCommissionData, mockLeads } from '../lib/mock-data';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
+
+/**
+ * Helper – creates a bot Message object.
+ */
+function botMsg(content: string, options: MessageOption[] = []): Message {
+  return {
+    id: generateId(),
+    role: 'assistant',
+    content,
+    timestamp: new Date(),
+    options,
+  };
+}
 
 export const ChatWidget: React.FC = () => {
   const [chatState, setChatState] = useState<ChatState>({
@@ -15,40 +26,33 @@ export const ChatWidget: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize with greeting
+  // ── Greeting on mount ──
   React.useEffect(() => {
-    const greeting: Message = {
-      id: generateId(),
-      role: 'assistant',
-      content: 'Hi there! I\'m Tunda Assist, your AI commission assistant. What would you like to check?',
-      timestamp: new Date(),
-      options: [
-        {
-          id: 'check_commissions',
-          label: 'Check my commissions',
-          value: 'commissions',
-        },
-        {
-          id: 'check_leads',
-          label: 'Check customer or Leads',
-          value: 'leads',
-        },
-        {
-          id: 'calculate',
-          label: 'Calculate Commissions',
-          value: 'calculate',
-        },
-      ],
-    };
-    setChatState(prev => ({
+    const { message, options } = responseFormatter.formatGreeting();
+    setChatState((prev) => ({
       ...prev,
-      messages: [greeting],
+      messages: [botMsg(message, options)],
+      conversationPhase: 'greeting',
     }));
   }, []);
 
+  // ── Helper: append messages to state ──
+  const appendMessages = useCallback(
+    (msgs: Message[], patch: Partial<ChatState> = {}) => {
+      setChatState((prev) => ({
+        ...prev,
+        messages: [...prev.messages, ...msgs],
+        ...patch,
+      }));
+    },
+    [],
+  );
+
+  // ──────────────────────────────────────────────
+  // Main handler – processes every user action
+  // ──────────────────────────────────────────────
   const handleSendMessage = useCallback(
     async (userInput: string) => {
-      // Add user message
       const userMessage: Message = {
         id: generateId(),
         role: 'user',
@@ -56,7 +60,8 @@ export const ChatWidget: React.FC = () => {
         timestamp: new Date(),
       };
 
-      setChatState(prev => ({
+      // Append user message immediately
+      setChatState((prev) => ({
         ...prev,
         messages: [...prev.messages, userMessage],
       }));
@@ -64,114 +69,164 @@ export const ChatWidget: React.FC = () => {
       setIsLoading(true);
 
       try {
-        // Detect intent
-        const detectionResult = intentDetector.detect(userInput);
+        const phase = chatState.conversationPhase;
+        const input = userInput.toLowerCase().trim();
 
-        let botResponse: Message;
-
-        switch (detectionResult.intent) {
-          case 'commission_summary': {
-            const period = detectionResult.parameters.period || '14_days';
-            const data = await apiClient.getCommissionData(period as any);
-            const { message, options } = responseFormatter.formatCommissionSummary(data);
-            botResponse = {
-              id: generateId(),
-              role: 'assistant',
-              content: message,
-              timestamp: new Date(),
-              options,
-              metadata: { intent: 'commission_summary', period: period as any },
-            };
-            break;
+        // ─── GREETING / DONE: main menu selection ───
+        if (phase === 'greeting' || phase === 'done') {
+          if (input === 'commissions' || input.includes('commission') || input.includes('check')) {
+            // Step 2 → ask for period
+            const { message, options } = responseFormatter.formatPeriodSelection();
+            appendMessages([botMsg(message, options)], {
+              conversationPhase: 'awaiting_period',
+              currentIntent: 'commission_summary',
+            });
+            return;
           }
 
-          case 'commission_breakdown': {
-            const period = detectionResult.parameters.period || '14_days';
-            const data = await apiClient.getCommissionData(period as any);
-            const { message, options } = responseFormatter.formatCommissionBreakdown(data, data.details);
-            botResponse = {
-              id: generateId(),
-              role: 'assistant',
-              content: message,
-              timestamp: new Date(),
-              options,
-              metadata: { intent: 'commission_breakdown', period: period as any },
-            };
-            break;
+          if (input === 'leads' || input.includes('lead') || input.includes('customer')) {
+            // Lead flow → ask for identifier
+            const { message, options } = responseFormatter.formatLeadIdPrompt();
+            appendMessages([botMsg(message, options)], {
+              conversationPhase: 'awaiting_lead_id',
+              currentIntent: 'lead_status',
+            });
+            return;
           }
 
-          case 'lead_status': {
-            const leadId = detectionResult.parameters.leadId || 'john';
-            const lead = await apiClient.getLeadStatus(leadId);
-            const { message, options } = responseFormatter.formatLeadStatus(lead);
-            botResponse = {
-              id: generateId(),
-              role: 'assistant',
-              content: message,
-              timestamp: new Date(),
-              options,
-              metadata: { intent: 'lead_status', leadId },
-            };
-            break;
+          if (input === 'calculate' || input.includes('calculate')) {
+            // Treat "Calculate" same as commission check for now
+            const { message, options } = responseFormatter.formatPeriodSelection();
+            appendMessages([botMsg(message, options)], {
+              conversationPhase: 'awaiting_period',
+              currentIntent: 'commission_summary',
+            });
+            return;
           }
 
-          case 'custom_question': {
-            const customInput = detectionResult.parameters.customInput || userInput;
-            const { message, options } = responseFormatter.formatCustomQuestion(customInput);
-            botResponse = {
-              id: generateId(),
-              role: 'assistant',
-              content: message,
-              timestamp: new Date(),
-              options,
-              metadata: { intent: 'custom_question' },
-            };
-            break;
-          }
-
-          default: {
-            const { message, options } = responseFormatter.formatUnknown();
-            botResponse = {
-              id: generateId(),
-              role: 'assistant',
-              content: message,
-              timestamp: new Date(),
-              options,
-              metadata: { intent: 'unknown' },
-            };
-          }
+          // Unrecognised → show menu again
+          const { message, options } = responseFormatter.formatUnknown();
+          appendMessages([botMsg(message, options)], {
+            conversationPhase: 'greeting',
+          });
+          return;
         }
 
-        setChatState(prev => ({
-          ...prev,
-          messages: [...prev.messages, botResponse],
-          currentIntent: detectionResult.intent,
-          conversationPhase: 'showing_results',
-        }));
+        // ─── AWAITING PERIOD: user picks a period ───
+        if (phase === 'awaiting_period') {
+          const periodMap: Record<string, CommissionPeriod> = {
+            '14_days': '14_days',
+            '30_days': '30_days',
+            '60_days': '60_days',
+            '90_days': '90_days',
+            custom: 'custom',
+            // allow plain numbers too
+            '14': '14_days',
+            '30': '30_days',
+            '60': '60_days',
+            '90': '90_days',
+          };
+
+          const period = periodMap[input] || '14_days';
+
+          // Step 4–6: fetch data & show summary
+          const data = await apiClient.getCommissionData(period);
+          const { message: summaryMsg } = responseFormatter.formatCommissionSummary(data);
+
+          // After summary ask "Would you like a breakdown?"
+          const { message: breakdownQ, options: breakdownOpts } =
+            responseFormatter.formatBreakdownPrompt();
+
+          appendMessages(
+            [botMsg(summaryMsg), botMsg(breakdownQ, breakdownOpts)],
+            {
+              conversationPhase: 'showing_summary',
+              selectedPeriod: period,
+              lastCommissionData: data,
+            },
+          );
+          return;
+        }
+
+        // ─── SHOWING SUMMARY: user answers breakdown Yes/No ───
+        if (phase === 'showing_summary') {
+          if (input === 'breakdown_yes' || input === 'yes' || input === '1') {
+            // Step 8: show breakdown
+            const data = chatState.lastCommissionData!;
+            const { message: breakdownMsg } =
+              responseFormatter.formatCommissionBreakdown(data);
+
+            // Step 10: Was this helpful?
+            const { message: feedbackQ, options: feedbackOpts } =
+              responseFormatter.formatFeedbackPrompt();
+
+            appendMessages(
+              [botMsg(breakdownMsg), botMsg(feedbackQ, feedbackOpts)],
+              { conversationPhase: 'feedback' },
+            );
+            return;
+          }
+
+          // Step 9: No breakdown → go to feedback
+          const { message: feedbackQ, options: feedbackOpts } =
+            responseFormatter.formatFeedbackPrompt();
+
+          appendMessages([botMsg(feedbackQ, feedbackOpts)], {
+            conversationPhase: 'feedback',
+          });
+          return;
+        }
+
+        // ─── FEEDBACK: Was this helpful? ───
+        if (phase === 'feedback') {
+          const positive = input === 'helpful_yes' || input === 'yes' || input === '1';
+          const { message, options } = responseFormatter.formatFeedbackThanks(positive);
+          appendMessages([botMsg(message, options)], {
+            conversationPhase: 'greeting',
+            lastCommissionData: undefined,
+            selectedPeriod: undefined,
+          });
+          return;
+        }
+
+        // ─── AWAITING LEAD ID ───
+        if (phase === 'awaiting_lead_id') {
+          const lead = await apiClient.getLeadStatus(input);
+          const { message: leadMsg } = responseFormatter.formatLeadStatus(lead);
+
+          // Then ask feedback
+          const { message: feedbackQ, options: feedbackOpts } =
+            responseFormatter.formatFeedbackPrompt();
+
+          appendMessages(
+            [botMsg(leadMsg), botMsg(feedbackQ, feedbackOpts)],
+            { conversationPhase: 'feedback' },
+          );
+          return;
+        }
+
+        // ─── Fallback ───
+        const { message, options } = responseFormatter.formatUnknown();
+        appendMessages([botMsg(message, options)], {
+          conversationPhase: 'greeting',
+        });
       } catch (error) {
         console.error('Error processing message:', error);
-        const errorMessage: Message = {
-          id: generateId(),
-          role: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again.',
-          timestamp: new Date(),
-        };
-        setChatState(prev => ({
-          ...prev,
-          messages: [...prev.messages, errorMessage],
-        }));
+        appendMessages([
+          botMsg('Sorry, I encountered an error. Please try again.'),
+        ]);
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [chatState.conversationPhase, chatState.lastCommissionData, appendMessages],
   );
 
   const handleSelectOption = useCallback(
     (_message: Message, option: MessageOption) => {
       handleSendMessage(option.value);
     },
-    [handleSendMessage]
+    [handleSendMessage],
   );
 
   return (

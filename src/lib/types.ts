@@ -1,6 +1,6 @@
 export type MessageRole = 'user' | 'assistant';
 
-export type Intent = 
+export type Intent =
   | 'commission_summary'
   | 'commission_breakdown'
   | 'lead_status'
@@ -9,6 +9,27 @@ export type Intent =
   | 'unknown';
 
 export type CommissionPeriod = '14_days' | '30_days' | '60_days' | '90_days' | 'custom';
+
+/**
+ * Conversation phases that drive the guided flow:
+ *  greeting          → initial menu
+ *  awaiting_period   → user must pick a commission period
+ *  showing_summary   → summary shown, ask "want breakdown?"
+ *  showing_breakdown → breakdown shown
+ *  awaiting_lead_id  → user must provide lead identifier
+ *  showing_lead      → lead info shown
+ *  feedback          → "was this helpful?"
+ *  done              → conversation ended / restart
+ */
+export type ConversationPhase =
+  | 'greeting'
+  | 'awaiting_period'
+  | 'showing_summary'
+  | 'showing_breakdown'
+  | 'awaiting_lead_id'
+  | 'showing_lead'
+  | 'feedback'
+  | 'done';
 
 export interface Message {
   id: string;
@@ -40,11 +61,26 @@ export interface IntentDetectionResult {
   };
 }
 
+// ── Commission types ──
+
+export interface SalesCommissionDetail {
+  customer: string;
+  amount: number;
+}
+
+export interface TransportCommissionDetail {
+  week: string;
+  amount: number;
+}
+
 export interface CommissionData {
   period: CommissionPeriod;
-  amount: number;
+  totalCommission: number;
+  transportCommission: number;
+  salesCommission: number;
   currency: string;
-  details?: CommissionDetail[];
+  salesBreakdown: SalesCommissionDetail[];
+  transportBreakdown: TransportCommissionDetail[];
 }
 
 export interface CommissionDetail {
@@ -52,6 +88,8 @@ export interface CommissionDetail {
   description: string;
   amount: number;
 }
+
+// ── Lead types ──
 
 export interface LeadStatus {
   leadId: string;
@@ -62,9 +100,13 @@ export interface LeadStatus {
   notes?: string;
 }
 
+// ── Chat state ──
+
 export interface ChatState {
   messages: Message[];
   currentIntent?: Intent;
-  conversationPhase: 'greeting' | 'awaiting_input' | 'processing' | 'showing_results';
+  conversationPhase: ConversationPhase;
   selectedPeriod?: CommissionPeriod;
+  /** Cache last fetched commission data so breakdown doesn't re-fetch */
+  lastCommissionData?: CommissionData;
 }

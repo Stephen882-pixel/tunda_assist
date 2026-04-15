@@ -1,9 +1,11 @@
 import { CommissionData, LeadStatus, CommissionPeriod } from './types';
 import { mockCommissionData, mockLeads } from './mock-data';
 
-// Mock API client - can be replaced with real fetch calls
+// Mock API client — replace with real fetch calls when integrating
 export class ApiClient {
-  private baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  // Will be used when integrating real backend APIs
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private readonly baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
   async getCommissionData(period: CommissionPeriod): Promise<CommissionData> {
     return new Promise((resolve) => {
@@ -23,7 +25,7 @@ export class ApiClient {
     });
   }
 
-  async detectIntent(userInput: string): Promise<{ intent: string; parameters: any }> {
+  async detectIntent(_userInput: string): Promise<{ intent: string; parameters: Record<string, unknown> }> {
     return new Promise((resolve) => {
       setTimeout(() => {
         // Intent detection would happen on the backend
