@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { cn } from '../lib/utils';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -39,11 +38,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-center gap-2 p-4 bg-white border-t border-border"
+      className="flex-shrink-0 p-4 bg-white border-t border-gray-100"
     >
-      <div className="flex-1 flex items-center gap-2 bg-gray-50 rounded-lg px-4 py-2">
+      {/* Input field */}
+      <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5 mb-3 border border-gray-100 focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-100 transition-all">
         <svg
-          className="w-5 h-5 text-gray-400"
+          className="w-4 h-4 text-gray-400 flex-shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -52,7 +52,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M13 10V3L4 14h7v7l9-11h-7z"
+            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
           />
         </svg>
         <input
@@ -63,22 +63,33 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className={cn(
-            'flex-1 bg-transparent outline-none text-foreground placeholder-gray-400',
-            disabled && 'opacity-50 cursor-not-allowed'
-          )}
+          className={
+            'flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-400 ' +
+            (disabled ? 'opacity-50 cursor-not-allowed' : '')
+          }
         />
       </div>
+
+      {/* Full-width Send button */}
       <button
         type="submit"
         disabled={disabled || !input.trim()}
-        className={cn(
-          'px-6 py-2 rounded-lg font-semibold transition-colors',
-          'bg-primary text-white hover:bg-primary-dark',
-          'disabled:opacity-50 disabled:cursor-not-allowed'
-        )}
+        className={
+          'w-full py-2.5 rounded-xl font-semibold text-sm text-white transition-all duration-200 ' +
+          'bg-gradient-to-r from-emerald-500 to-green-600 ' +
+          'hover:from-emerald-600 hover:to-green-700 hover:shadow-md ' +
+          'active:scale-[0.98] ' +
+          'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none'
+        }
       >
-        Send
+        <div className="flex items-center justify-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+            />
+          </svg>
+          Send
+        </div>
       </button>
     </form>
   );

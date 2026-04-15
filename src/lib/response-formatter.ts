@@ -47,25 +47,41 @@ export class ResponseFormatter {
   }
 
   // ── Step 8: Detailed breakdown ──
-  formatCommissionBreakdown(data: CommissionData): { message: string; options: MessageOption[] } {
+  formatCommissionBreakdown(data: CommissionData): {
+    message: string;
+    options: MessageOption[];
+    breakdownData: import('./types').BreakdownData;
+  } {
     const periodLabel = getPeriodLabel(data.period);
 
-    let msg = `📊 Commission Breakdown for ${periodLabel}\n\n`;
-
-    msg += '💰 Sales Commissions:\n';
-    data.salesBreakdown.forEach((s) => {
-      msg += `  • ${s.customer}: ${formatCurrency(s.amount, data.currency)}\n`;
-    });
-
-    msg += '\n🚛 Transport Commissions:\n';
-    data.transportBreakdown.forEach((t) => {
-      msg += `  • ${t.week}: ${formatCurrency(t.amount, data.currency)}\n`;
-    });
-
-    // Step 10: Was this helpful?
+    const message = `Commission Breakdown for ${periodLabel}`;
     const options: MessageOption[] = [];
 
-    return { message: msg.trim(), options };
+    const breakdownData: import('./types').BreakdownData = {
+      periodLabel,
+      sections: [
+        {
+          title: 'Sales Commissions',
+          icon: '💰',
+          items: data.salesBreakdown.map((s) => ({
+            label: s.customer,
+            amount: s.amount,
+            currency: data.currency,
+          })),
+        },
+        {
+          title: 'Transport Commissions',
+          icon: '🚛',
+          items: data.transportBreakdown.map((t) => ({
+            label: t.week,
+            amount: t.amount,
+            currency: data.currency,
+          })),
+        },
+      ],
+    };
+
+    return { message, options, breakdownData };
   }
 
   // ── Step 10: Feedback ──

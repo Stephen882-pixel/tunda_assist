@@ -31,12 +31,27 @@ export type ConversationPhase =
   | 'feedback'
   | 'done';
 
+export type MessageType = 'text' | 'options' | 'breakdown';
+
+export interface BreakdownSection {
+  title: string;
+  icon: string;
+  items: { label: string; amount: number; currency: string }[];
+}
+
+export interface BreakdownData {
+  periodLabel: string;
+  sections: BreakdownSection[];
+}
+
 export interface Message {
   id: string;
   role: MessageRole;
   content: string;
   timestamp: Date;
+  messageType?: MessageType;
   options?: MessageOption[];
+  breakdownData?: BreakdownData;
   metadata?: {
     intent?: Intent;
     period?: CommissionPeriod;

@@ -3,8 +3,8 @@
 @theme {
   --color-background: #f8faf9;
   --color-foreground: #1a1a1a;
-  --color-primary: #4CAF50;
-  --color-primary-dark: #2d7a3d;
+  --color-primary: #16a34a;
+  --color-primary-dark: #15803d;
   --color-accent: #ffc107;
   --color-border: #e5e7eb;
 }
@@ -16,7 +16,7 @@
 }
 
 html {
-  background-color: #f8faf9;
+  background-color: #f0fdf4;
 }
 
 body {
@@ -26,10 +26,41 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #1a1a1a;
-  background-color: #f8faf9;
+  background-color: #f0fdf4;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+/* ── Green gradient for header & FAB ── */
+.chat-header-gradient {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%);
+}
+
+/* ── Message entry animation ── */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-enter {
+  animation: messageSlideIn 0.3s ease-out both;
+}
+
+/* ── Custom scrollbar ── */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 5px;
+}
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }

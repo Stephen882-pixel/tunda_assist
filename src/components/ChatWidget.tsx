@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Message, MessageOption, CommissionPeriod, ChatState } from '../lib/types';
+import { Message, MessageOption, CommissionPeriod, ChatState, BreakdownData } from '../lib/types';
 import { generateId } from '../lib/utils';
 import { responseFormatter } from '../lib/response-formatter';
 import { apiClient } from '../lib/api-client';
@@ -9,13 +9,19 @@ import { ChatInput } from './ChatInput';
 /**
  * Helper – creates a bot Message object.
  */
-function botMsg(content: string, options: MessageOption[] = []): Message {
+function botMsg(
+  content: string,
+  options: MessageOption[] = [],
+  breakdownData?: BreakdownData,
+): Message {
   return {
     id: generateId(),
     role: 'assistant',
     content,
     timestamp: new Date(),
+    messageType: breakdownData ? 'breakdown' : options.length > 0 ? 'options' : 'text',
     options,
+    breakdownData,
   };
 }
 
@@ -25,6 +31,8 @@ export const ChatWidget: React.FC = () => {
     conversationPhase: 'greeting',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // ── Greeting on mount ──
   React.useEffect(() => {
@@ -58,6 +66,7 @@ export const ChatWidget: React.FC = () => {
         role: 'user',
         content: userInput,
         timestamp: new Date(),
+        messageType: 'text',
       };
 
       // Append user message immediately
@@ -75,7 +84,6 @@ export const ChatWidget: React.FC = () => {
         // ─── GREETING / DONE: main menu selection ───
         if (phase === 'greeting' || phase === 'done') {
           if (input === 'commissions' || input.includes('commission') || input.includes('check')) {
-            // Step 2 → ask for period
             const { message, options } = responseFormatter.formatPeriodSelection();
             appendMessages([botMsg(message, options)], {
               conversationPhase: 'awaiting_period',
@@ -85,7 +93,6 @@ export const ChatWidget: React.FC = () => {
           }
 
           if (input === 'leads' || input.includes('lead') || input.includes('customer')) {
-            // Lead flow → ask for identifier
             const { message, options } = responseFormatter.formatLeadIdPrompt();
             appendMessages([botMsg(message, options)], {
               conversationPhase: 'awaiting_lead_id',
@@ -95,7 +102,6 @@ export const ChatWidget: React.FC = () => {
           }
 
           if (input === 'calculate' || input.includes('calculate')) {
-            // Treat "Calculate" same as commission check for now
             const { message, options } = responseFormatter.formatPeriodSelection();
             appendMessages([botMsg(message, options)], {
               conversationPhase: 'awaiting_period',
@@ -104,7 +110,6 @@ export const ChatWidget: React.FC = () => {
             return;
           }
 
-          // Unrecognised → show menu again
           const { message, options } = responseFormatter.formatUnknown();
           appendMessages([botMsg(message, options)], {
             conversationPhase: 'greeting',
@@ -120,7 +125,6 @@ export const ChatWidget: React.FC = () => {
             '60_days': '60_days',
             '90_days': '90_days',
             custom: 'custom',
-            // allow plain numbers too
             '14': '14_days',
             '30': '30_days',
             '60': '60_days',
@@ -129,11 +133,9 @@ export const ChatWidget: React.FC = () => {
 
           const period = periodMap[input] || '14_days';
 
-          // Step 4–6: fetch data & show summary
           const data = await apiClient.getCommissionData(period);
           const { message: summaryMsg } = responseFormatter.formatCommissionSummary(data);
 
-          // After summary ask "Would you like a breakdown?"
           const { message: breakdownQ, options: breakdownOpts } =
             responseFormatter.formatBreakdownPrompt();
 
@@ -151,23 +153,20 @@ export const ChatWidget: React.FC = () => {
         // ─── SHOWING SUMMARY: user answers breakdown Yes/No ───
         if (phase === 'showing_summary') {
           if (input === 'breakdown_yes' || input === 'yes' || input === '1') {
-            // Step 8: show breakdown
             const data = chatState.lastCommissionData!;
-            const { message: breakdownMsg } =
+            const { message: breakdownMsg, breakdownData } =
               responseFormatter.formatCommissionBreakdown(data);
 
-            // Step 10: Was this helpful?
             const { message: feedbackQ, options: feedbackOpts } =
               responseFormatter.formatFeedbackPrompt();
 
             appendMessages(
-              [botMsg(breakdownMsg), botMsg(feedbackQ, feedbackOpts)],
+              [botMsg(breakdownMsg, [], breakdownData), botMsg(feedbackQ, feedbackOpts)],
               { conversationPhase: 'feedback' },
             );
             return;
           }
 
-          // Step 9: No breakdown → go to feedback
           const { message: feedbackQ, options: feedbackOpts } =
             responseFormatter.formatFeedbackPrompt();
 
@@ -194,7 +193,6 @@ export const ChatWidget: React.FC = () => {
           const lead = await apiClient.getLeadStatus(input);
           const { message: leadMsg } = responseFormatter.formatLeadStatus(lead);
 
-          // Then ask feedback
           const { message: feedbackQ, options: feedbackOpts } =
             responseFormatter.formatFeedbackPrompt();
 
@@ -230,33 +228,109 @@ export const ChatWidget: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-primary to-primary-dark text-white p-4 shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-lg text-primary-dark">
-            T
+    <>
+      {/* ── Floating Chat Widget ── */}
+      <div
+        className={`
+          fixed z-50 flex flex-col bg-white rounded-2xl shadow-2xl
+          transition-all duration-300 ease-in-out overflow-hidden
+          ${isExpanded
+            ? 'inset-0 rounded-none'
+            : 'bottom-6 right-6 w-[400px] h-[640px] max-h-[85vh]'
+          }
+          ${isOpen
+            ? 'opacity-100 scale-100 pointer-events-auto translate-y-0'
+            : 'opacity-0 scale-95 pointer-events-none translate-y-4'
+          }
+        `}
+      >
+        {/* ── Header ── */}
+        <div className="chat-header-gradient text-white px-5 py-4 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold leading-tight">Tunda Assist</h1>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></span>
+                <p className="text-xs text-green-100">AI Assistant Active</p>
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold">Tunda Assist</h1>
-            <p className="text-sm opacity-90">AI Assistant Active</p>
+          <div className="flex items-center gap-1">
+            {/* Expand / Collapse */}
+            <button
+              onClick={() => setIsExpanded((e) => !e)}
+              className="p-2 rounded-lg hover:bg-white/15 transition-colors"
+              title={isExpanded ? 'Collapse' : 'Expand'}
+            >
+              {isExpanded ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"
+                  />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"
+                  />
+                </svg>
+              )}
+            </button>
+            {/* Close */}
+            <button
+              onClick={() => { setIsOpen(false); setIsExpanded(false); }}
+              className="p-2 rounded-lg hover:bg-white/15 transition-colors"
+              title="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
+
+        {/* ── Message List ── */}
+        <MessageList
+          messages={chatState.messages}
+          onSelectOption={handleSelectOption}
+          isLoading={isLoading}
+        />
+
+        {/* ── Chat Input ── */}
+        <ChatInput
+          onSendMessage={handleSendMessage}
+          disabled={isLoading}
+          placeholder="Ask a question..."
+        />
       </div>
 
-      {/* Message List */}
-      <MessageList
-        messages={chatState.messages}
-        onSelectOption={handleSelectOption}
-        isLoading={isLoading}
-      />
-
-      {/* Chat Input */}
-      <ChatInput
-        onSendMessage={handleSendMessage}
-        disabled={isLoading}
-        placeholder="Ask a question..."
-      />
-    </div>
+      {/* ── Floating Toggle Button ── */}
+      <button
+        onClick={() => setIsOpen((o) => !o)}
+        className={`
+          fixed bottom-6 right-6 z-40 w-16 h-16 rounded-full
+          chat-header-gradient text-white shadow-lg
+          flex items-center justify-center
+          hover:shadow-xl hover:scale-105
+          active:scale-95
+          transition-all duration-200
+          ${isOpen ? 'opacity-0 pointer-events-none scale-0' : 'opacity-100 scale-100'}
+        `}
+        title="Open Tunda Assist"
+      >
+        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+          />
+        </svg>
+      </button>
+    </>
   );
 };
