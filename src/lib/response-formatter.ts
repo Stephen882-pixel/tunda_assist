@@ -4,7 +4,7 @@ import { formatCurrency, getPeriodLabel } from './utils';
 export class ResponseFormatter {
   // ── Step 2: Ask which period ──
   formatPeriodSelection(): { message: string; options: MessageOption[] } {
-    const message = 'Please select a commission period:';
+    const message = 'Select the Commission period';
     const options: MessageOption[] = [
       { id: 'p_14', label: '14 days', value: '14_days' },
       { id: 'p_30', label: '30 days', value: '30_days' },
@@ -18,14 +18,9 @@ export class ResponseFormatter {
   // ── Step 6: Commission summary ──
   formatCommissionSummary(data: CommissionData): { message: string; options: MessageOption[] } {
     const periodLabel = getPeriodLabel(data.period);
-    const total = formatCurrency(data.totalCommission, data.currency);
-    const transport = formatCurrency(data.transportCommission, data.currency);
-    const sales = formatCurrency(data.salesCommission, data.currency);
+    const total = data.totalCommission;
 
-    const message =
-      `Commission amount for ${periodLabel} is ${total}\n` +
-      `Total transport: ${transport}\n` +
-      `Total sales commission: ${sales}`;
+    const message = `Commission amount for the ${periodLabel} is ${total}`;
 
     // Step 7: ask for breakdown
     const options: MessageOption[] = [
@@ -38,7 +33,7 @@ export class ResponseFormatter {
 
   // ── Ask "would you like a breakdown?" label ──
   formatBreakdownPrompt(): { message: string; options: MessageOption[] } {
-    const message = 'Would you like a breakdown of the above?';
+    const message = 'Would you like a breakdown of the above';
     const options: MessageOption[] = [
       { id: 'breakdown_yes', label: 'Yes', value: 'breakdown_yes' },
       { id: 'breakdown_no', label: 'No', value: 'breakdown_no' },
@@ -97,12 +92,13 @@ export class ResponseFormatter {
   // ── Feedback received ──
   formatFeedbackThanks(positive: boolean): { message: string; options: MessageOption[] } {
     const message = positive
-      ? 'Glad I could help! 😊 What else would you like to check?'
-      : 'Sorry about that. Let me know how I can help better. What would you like to do?';
+      ? 'Thank you for your response\nWhat is something else you would like to check?'
+      : 'Sorry about that. What would you like to do?';
     const options: MessageOption[] = [
-      { id: 'check_commissions', label: 'Check my commissions', value: 'commissions' },
-      { id: 'check_leads', label: 'Check customer or Leads', value: 'leads' },
+      { id: 'check_commissions', label: 'Check commission periods', value: 'commissions' },
+      { id: 'check_leads', label: 'Check customers or Leads', value: 'leads' },
       { id: 'calculate', label: 'Calculate Commissions', value: 'calculate' },
+      { id: 'breakdown', label: 'Check a break down of commissions', value: 'commissions' },
     ];
     return { message, options };
   }
@@ -129,11 +125,11 @@ export class ResponseFormatter {
   // ── Greeting ──
   formatGreeting(): { message: string; options: MessageOption[] } {
     const message =
-      "Hi there! I'm Tunda Assist, your AI commission assistant. What would you like to check?";
+      'What would you like to check?';
     const options: MessageOption[] = [
       { id: 'check_commissions', label: 'Check my commissions', value: 'commissions' },
-      { id: 'check_leads', label: 'Check customer or Leads', value: 'leads' },
-      { id: 'calculate', label: 'Calculate Commissions', value: 'calculate' },
+      { id: 'check_leads', label: 'Check customer or leads', value: 'leads' },
+      { id: 'calculate', label: 'How much I get paid per Lead', value: 'calculate' },
     ];
     return { message, options };
   }
@@ -143,8 +139,8 @@ export class ResponseFormatter {
     const message = "I didn't quite understand that. What would you like to do?";
     const options: MessageOption[] = [
       { id: 'check_commissions', label: 'Check my commissions', value: 'commissions' },
-      { id: 'check_leads', label: 'Check customer or Leads', value: 'leads' },
-      { id: 'calculate', label: 'Calculate Commissions', value: 'calculate' },
+      { id: 'check_leads', label: 'Check customer or leads', value: 'leads' },
+      { id: 'calculate', label: 'How much I get paid per Lead', value: 'calculate' },
     ];
     return { message, options };
   }

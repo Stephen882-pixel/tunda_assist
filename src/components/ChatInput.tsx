@@ -38,23 +38,40 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex-shrink-0 p-4 bg-white border-t border-gray-100"
+      style={{
+        padding: '12px 14px 14px',
+        background: '#f5f7f5',
+        borderTop: '1px solid #e8eeeb',
+        flexShrink: 0,
+      }}
     >
-      {/* Input field */}
-      <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5 mb-3 border border-gray-100 focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-100 transition-all">
-        <svg
-          className="w-4 h-4 text-gray-400 flex-shrink-0"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
+      {/* Input row */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0,
+          background: '#fff',
+          border: '1.5px solid #dce8e1',
+          borderRadius: '12px',
+          padding: '0 12px',
+          marginBottom: '10px',
+        }}
+      >
+        {/* Star icon */}
+        <span style={{ flexShrink: 0, marginRight: '8px', display: 'flex' }}>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#4caf7d"
+            strokeWidth="1.8"
             strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-          />
-        </svg>
+          >
+            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+          </svg>
+        </span>
         <input
           ref={inputRef}
           type="text"
@@ -63,33 +80,49 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className={
-            'flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-400 ' +
-            (disabled ? 'opacity-50 cursor-not-allowed' : '')
-          }
+          style={{
+            flex: 1,
+            border: 'none',
+            outline: 'none',
+            background: 'transparent',
+            fontFamily: 'inherit',
+            fontSize: '13.5px',
+            color: '#2a3d30',
+            padding: '12px 0',
+            opacity: disabled ? 0.5 : 1,
+            cursor: disabled ? 'not-allowed' : 'text',
+          }}
         />
       </div>
 
-      {/* Full-width Send button */}
+      {/* Send button */}
       <button
         type="submit"
         disabled={disabled || !input.trim()}
-        className={
-          'w-full py-2.5 rounded-xl font-semibold text-sm text-white transition-all duration-200 ' +
-          'bg-gradient-to-r from-emerald-500 to-green-600 ' +
-          'hover:from-emerald-600 hover:to-green-700 hover:shadow-md ' +
-          'active:scale-[0.98] ' +
-          'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none'
-        }
+        className="chat-send-gradient"
+        style={{
+          width: '100%',
+          padding: '13px',
+          border: 'none',
+          borderRadius: '12px',
+          color: '#fff',
+          fontFamily: 'inherit',
+          fontSize: '14.5px',
+          fontWeight: 600,
+          letterSpacing: '0.2px',
+          cursor: disabled || !input.trim() ? 'not-allowed' : 'pointer',
+          opacity: disabled || !input.trim() ? 0.5 : 1,
+          boxShadow: '0 4px 14px rgba(46,158,110,0.35)',
+          transition: 'opacity 0.15s, transform 0.1s',
+        }}
+        onMouseEnter={(e) => {
+          if (!disabled && input.trim()) e.currentTarget.style.opacity = '0.92';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = disabled || !input.trim() ? '0.5' : '1';
+        }}
       >
-        <div className="flex items-center justify-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-            />
-          </svg>
-          Send
-        </div>
+        Send
       </button>
     </form>
   );
