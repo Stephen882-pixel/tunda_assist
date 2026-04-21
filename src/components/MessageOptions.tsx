@@ -7,31 +7,53 @@ interface MessageOptionsProps {
   disabled?: boolean;
 }
 
+/**
+ * Inline numbered options rendered INSIDE a bot bubble.
+ * Matches the design: "1. 14 days\n2. 30 days" etc.
+ */
 export const MessageOptions: React.FC<MessageOptionsProps> = ({
   options,
   onSelectOption,
   disabled = false,
 }) => {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <ol
+      style={{
+        listStyle: 'none',
+        padding: '0',
+        margin: '6px 0 0 0',
+      }}
+    >
       {options.map((option, idx) => (
-        <button
-          key={option.id}
-          onClick={() => !disabled && onSelectOption(option)}
-          disabled={disabled}
-          className={
-            'w-full flex items-center gap-3 px-4 py-2.5 text-left ' +
-            'hover:bg-emerald-50 transition-colors ' +
-            'disabled:opacity-40 disabled:cursor-not-allowed ' +
-            (idx < options.length - 1 ? 'border-b border-gray-50' : '')
-          }
-        >
-          <span className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-            {idx + 1}
-          </span>
-          <span className="text-sm text-gray-700 font-medium">{option.label}</span>
-        </button>
+        <li key={option.id} style={{ marginTop: idx > 0 ? '2px' : 0 }}>
+          <button
+            onClick={() => !disabled && onSelectOption(option)}
+            disabled={disabled}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '2px 0',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              opacity: disabled ? 0.5 : 1,
+              fontSize: 'inherit',
+              color: 'inherit',
+              fontFamily: 'inherit',
+              fontWeight: 'inherit',
+              lineHeight: 'inherit',
+              textAlign: 'left',
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              if (!disabled) e.currentTarget.style.color = '#2e9e6e';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'inherit';
+            }}
+          >
+            {idx + 1}. {option.label}
+          </button>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 };

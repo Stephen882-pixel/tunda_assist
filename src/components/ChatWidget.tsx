@@ -5,6 +5,7 @@ import { responseFormatter } from '../lib/response-formatter';
 import { apiClient } from '../lib/api-client';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
+import { WelcomeScreen } from './WelcomeScreen';
 
 /**
  * Helper – creates a bot Message object.
@@ -33,6 +34,8 @@ export const ChatWidget: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  /** Tracks whether user has left the welcome screen */
+  const [showWelcome, setShowWelcome] = useState(true);
 
   // ── Greeting on mount ──
   React.useEffect(() => {
@@ -61,6 +64,9 @@ export const ChatWidget: React.FC = () => {
   // ──────────────────────────────────────────────
   const handleSendMessage = useCallback(
     async (userInput: string) => {
+      // Leave welcome screen on first interaction
+      if (showWelcome) setShowWelcome(false);
+
       const userMessage: Message = {
         id: generateId(),
         role: 'user',
@@ -217,7 +223,15 @@ export const ChatWidget: React.FC = () => {
         setIsLoading(false);
       }
     },
-    [chatState.conversationPhase, chatState.lastCommissionData, appendMessages],
+    [chatState.conversationPhase, chatState.lastCommissionData, appendMessages, showWelcome],
+  );
+
+  /** When user picks a welcome-screen quick button */
+  const handleWelcomeSelect = useCallback(
+    (option: MessageOption) => {
+      handleSendMessage(option.label); // sends label as user text, e.g. "Check my commissions"
+    },
+    [handleSendMessage],
   );
 
   const handleSelectOption = useCallback(
@@ -227,85 +241,166 @@ export const ChatWidget: React.FC = () => {
     [handleSendMessage],
   );
 
+  // Greeting options for welcome screen
+  const greetingOptions = chatState.messages[0]?.options || [];
+
   return (
     <>
       {/* ── Floating Chat Widget ── */}
       <div
-        className={`
-          fixed z-50 flex flex-col bg-white rounded-2xl shadow-2xl
-          transition-all duration-300 ease-in-out overflow-hidden
-          ${isExpanded
-            ? 'inset-0 rounded-none'
-            : 'bottom-6 right-6 w-[400px] h-[640px] max-h-[85vh]'
-          }
-          ${isOpen
-            ? 'opacity-100 scale-100 pointer-events-auto translate-y-0'
-            : 'opacity-0 scale-95 pointer-events-none translate-y-4'
-          }
-        `}
+        style={{
+          position: 'fixed',
+          zIndex: 50,
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: isExpanded ? 0 : '24px',
+          overflow: 'hidden',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
+          background: '#f5f7f5',
+          transition: 'all 0.3s ease',
+          ...(isExpanded
+            ? { inset: 0 }
+            : { bottom: '24px', right: '24px', width: '340px', height: '600px', maxHeight: '85vh' }
+          ),
+          ...(isOpen
+            ? { opacity: 1, transform: 'scale(1) translateY(0)', pointerEvents: 'auto' as const }
+            : { opacity: 0, transform: 'scale(0.95) translateY(16px)', pointerEvents: 'none' as const }
+          ),
+        }}
       >
         {/* ── Header ── */}
-        <div className="chat-header-gradient text-white px-5 py-4 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                />
-              </svg>
+        <div
+          className="chat-header-gradient"
+          style={{
+            padding: '18px 18px 18px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexShrink: 0,
+          }}
+        >
+          {/* Logo */}
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: 'linear-gradient(145deg, #f5c842 0%, #e8a800 40%, #2e9e6e 60%, #1a7a50 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              overflow: 'hidden',
+            }}
+          >
+            <svg width="26" height="26" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="16" cy="16" r="14" fill="#f5c842" />
+              <path d="M8 16 Q16 6 24 16 Q16 26 8 16Z" fill="#2e9e6e" />
+            </svg>
+          </div>
+
+          {/* Info */}
+          <div style={{ flex: 1 }}>
+            <div
+              style={{
+                color: '#fff',
+                fontSize: '16px',
+                fontWeight: 700,
+                lineHeight: 1.2,
+                letterSpacing: '-0.2px',
+              }}
+            >
+              Tunda Assist
             </div>
-            <div>
-              <h1 className="text-lg font-bold leading-tight">Tunda Assist</h1>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></span>
-                <p className="text-xs text-green-100">AI Assistant Active</p>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+              <div
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: '#6de8a0',
+                  boxShadow: '0 0 6px #6de8a0',
+                }}
+              />
+              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '12px', fontWeight: 500 }}>
+                AI Assistant Active
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            {/* Expand / Collapse */}
+
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* Expand */}
             <button
               onClick={() => setIsExpanded((e) => !e)}
-              className="p-2 rounded-lg hover:bg-white/15 transition-colors"
               title={isExpanded ? 'Collapse' : 'Expand'}
+              style={{
+                width: '28px',
+                height: '28px',
+                border: 'none',
+                background: 'rgba(255,255,255,0.15)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
             >
-              {isExpanded ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"
-                  />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"
-                  />
-                </svg>
-              )}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 3 21 3 21 9" />
+                <polyline points="9 21 3 21 3 15" />
+                <line x1="21" y1="3" x2="14" y2="10" />
+                <line x1="3" y1="21" x2="10" y2="14" />
+              </svg>
             </button>
             {/* Close */}
             <button
               onClick={() => { setIsOpen(false); setIsExpanded(false); }}
-              className="p-2 rounded-lg hover:bg-white/15 transition-colors"
               title="Close"
+              style={{
+                width: '28px',
+                height: '28px',
+                border: 'none',
+                background: 'rgba(255,255,255,0.15)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
           </div>
         </div>
 
-        {/* ── Message List ── */}
-        <MessageList
-          messages={chatState.messages}
-          onSelectOption={handleSelectOption}
-          isLoading={isLoading}
-        />
+        {/* ── Body: Welcome or Chat ── */}
+        {showWelcome ? (
+          <WelcomeScreen
+            options={greetingOptions}
+            onSelectOption={handleWelcomeSelect}
+          />
+        ) : (
+          <MessageList
+            messages={chatState.messages}
+            onSelectOption={handleSelectOption}
+            isLoading={isLoading}
+          />
+        )}
 
-        {/* ── Chat Input ── */}
+        {/* ── Footer / Input ── */}
         <ChatInput
-          onSendMessage={handleSendMessage}
+          onSendMessage={(msg) => {
+            if (showWelcome) setShowWelcome(false);
+            handleSendMessage(msg);
+          }}
           disabled={isLoading}
           placeholder="Ask a question..."
         />
@@ -314,21 +409,31 @@ export const ChatWidget: React.FC = () => {
       {/* ── Floating Toggle Button ── */}
       <button
         onClick={() => setIsOpen((o) => !o)}
-        className={`
-          fixed bottom-6 right-6 z-40 w-16 h-16 rounded-full
-          chat-header-gradient text-white shadow-lg
-          flex items-center justify-center
-          hover:shadow-xl hover:scale-105
-          active:scale-95
-          transition-all duration-200
-          ${isOpen ? 'opacity-0 pointer-events-none scale-0' : 'opacity-100 scale-100'}
-        `}
+        className="chat-send-gradient"
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 40,
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          border: 'none',
+          color: '#fff',
+          boxShadow: '0 4px 14px rgba(46,158,110,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          opacity: isOpen ? 0 : 1,
+          transform: isOpen ? 'scale(0)' : 'scale(1)',
+          pointerEvents: isOpen ? 'none' : 'auto',
+        }}
         title="Open Tunda Assist"
       >
-        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-          />
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       </button>
     </>
