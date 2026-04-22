@@ -25,6 +25,8 @@ export type ConversationPhase =
   | 'greeting'
   | 'awaiting_period'
   | 'showing_summary'
+  | 'awaiting_milestone_selection'
+  | 'showing_milestone_breakdown'
   | 'showing_breakdown'
   | 'awaiting_lead_id'
   | 'showing_lead'
@@ -88,6 +90,29 @@ export interface TransportCommissionDetail {
   amount: number;
 }
 
+export interface MilestoneBreakdown {
+  cds2: number;
+  jsf: number;
+  transportAllowance: number;
+  tv: number;
+  directDrip: number;
+}
+
+export interface MilestoneCustomerDetail {
+  customer: string;
+  amount: number;
+}
+
+export interface MilestoneDetailedBreakdown {
+  cds2: MilestoneCustomerDetail[];
+  jsf: MilestoneCustomerDetail[];
+  transportAllowance: TransportCommissionDetail[];
+  tv: MilestoneCustomerDetail[];
+  directDrip: MilestoneCustomerDetail[];
+}
+
+export type MilestoneType = 'cds2' | 'jsf' | 'transportAllowance' | 'tv' | 'directDrip';
+
 export interface CommissionData {
   period: CommissionPeriod;
   totalCommission: number;
@@ -96,6 +121,8 @@ export interface CommissionData {
   currency: string;
   salesBreakdown: SalesCommissionDetail[];
   transportBreakdown: TransportCommissionDetail[];
+  milestoneBreakdown: MilestoneBreakdown;
+  milestoneDetails: MilestoneDetailedBreakdown;
 }
 
 export interface CommissionDetail {
@@ -124,4 +151,5 @@ export interface ChatState {
   selectedPeriod?: CommissionPeriod;
   /** Cache last fetched commission data so breakdown doesn't re-fetch */
   lastCommissionData?: CommissionData;
+  selectedMilestone?: MilestoneType;
 }

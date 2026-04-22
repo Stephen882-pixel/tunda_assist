@@ -159,17 +159,12 @@ export const ChatWidget: React.FC = () => {
         // ─── SHOWING SUMMARY: user answers breakdown Yes/No ───
         if (phase === 'showing_summary') {
           if (input === 'breakdown_yes' || input === 'yes' || input === '1') {
-            const data = chatState.lastCommissionData!;
-            const { message: breakdownMsg, breakdownData } =
-              responseFormatter.formatCommissionBreakdown(data);
+            // Ask which milestone they want to see
+            const { message, options } = responseFormatter.formatMilestoneSelection();
 
-            const { message: feedbackQ, options: feedbackOpts } =
-              responseFormatter.formatFeedbackPrompt();
-
-            appendMessages(
-              [botMsg(breakdownMsg, [], breakdownData), botMsg(feedbackQ, feedbackOpts)],
-              { conversationPhase: 'feedback' },
-            );
+            appendMessages([botMsg(message, options)], {
+              conversationPhase: 'awaiting_milestone_selection',
+            });
             return;
           }
 
@@ -178,6 +173,75 @@ export const ChatWidget: React.FC = () => {
 
           appendMessages([botMsg(feedbackQ, feedbackOpts)], {
             conversationPhase: 'feedback',
+          });
+          return;
+        }
+
+        // ─── AWAITING MILESTONE SELECTION: user picks a milestone ───
+        if (phase === 'awaiting_milestone_selection') {
+          const milestoneMap: Record<string, import('../lib/types').MilestoneType> = {
+            '1': 'cds2',
+            '2': 'jsf',
+            '3': 'transportAllowance',
+            '4': 'tv',
+            '5': 'directDrip',
+            cds2: 'cds2',
+            jsf: 'jsf',
+            transportallowance: 'transportAllowance',
+            tv: 'tv',
+            directdrip: 'directDrip',
+          };
+
+          const milestone = milestoneMap[input];
+          if (milestone && chatState.lastCommissionData) {
+            const { message, options } = responseFormatter.formatMilestoneBreakdown(
+              chatState.lastCommissionData,
+              milestone
+            );
+
+            appendMessages(
+              [botMsg(message, options)],
+              {
+                conversationPhase: 'showing_milestone_breakdown',
+                selectedMilestone: milestone,
+              }
+            );
+            return;
+          }
+
+          // If invalid milestone, ask again
+          const { message, options } = responseFormatter.formatMilestoneSelection();
+          appendMessages([botMsg(message, options)]);
+          return;
+        }
+
+        // ─── SHOWING MILESTONE BREAKDOWN: user chooses next action ───
+        if (phase === 'showing_milestone_breakdown') {
+          // User wants to see another milestone
+          if (input === 'see_another_milestone' || input === '1') {
+            const { message, options } = responseFormatter.formatMilestoneSelection();
+            appendMessages([botMsg(message, options)], {
+              conversationPhase: 'awaiting_milestone_selection',
+            });
+            return;
+          }
+
+          // User wants to go back to main menu
+          if (input === 'back_to_menu' || input === '2') {
+            const { message, options } = responseFormatter.formatGreeting();
+            appendMessages([botMsg(message, options)], {
+              conversationPhase: 'greeting',
+              lastCommissionData: undefined,
+              selectedPeriod: undefined,
+              selectedMilestone: undefined,
+            });
+            return;
+          }
+
+          // Default: ask what they want to do
+          const { message, options } = responseFormatter.formatGreeting();
+          appendMessages([botMsg(message, options)], {
+            conversationPhase: 'greeting',
           });
           return;
         }

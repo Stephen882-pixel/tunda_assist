@@ -1,4 +1,4 @@
-import { CommissionData, LeadStatus, MessageOption } from './types';
+import { CommissionData, LeadStatus, MessageOption, MilestoneType } from './types';
 import { formatCurrency, getPeriodLabel } from './utils';
 
 export class ResponseFormatter {
@@ -20,7 +20,14 @@ export class ResponseFormatter {
     const periodLabel = getPeriodLabel(data.period);
     const total = data.totalCommission;
 
-    const message = `Commission amount for the ${periodLabel} is ${total}`;
+    const message = 
+      `Commission amount for the ${periodLabel} is ${total}\n\n` +
+      `Breakdown Summary:\n` +
+      `CDS2: ${data.milestoneBreakdown.cds2}\n` +
+      `JSF: ${data.milestoneBreakdown.jsf}\n` +
+      `Transport Allowance: ${data.milestoneBreakdown.transportAllowance}\n` +
+      `TV: ${data.milestoneBreakdown.tv}\n` +
+      `Direct Drip: ${data.milestoneBreakdown.directDrip}`;
 
     // Step 7: ask for breakdown
     const options: MessageOption[] = [
@@ -37,6 +44,58 @@ export class ResponseFormatter {
     const options: MessageOption[] = [
       { id: 'breakdown_yes', label: 'Yes', value: 'breakdown_yes' },
       { id: 'breakdown_no', label: 'No', value: 'breakdown_no' },
+    ];
+    return { message, options };
+  }
+
+  // ── Ask which milestone breakdown to see ──
+  formatMilestoneSelection(): { message: string; options: MessageOption[] } {
+    const message = 'Which breakdown milestone would you like to see?';
+    const options: MessageOption[] = [
+      { id: 'milestone_cds2', label: 'CDS2', value: 'cds2' },
+      { id: 'milestone_jsf', label: 'JSF', value: 'jsf' },
+      { id: 'milestone_transport', label: 'Transport Allowance', value: 'transportAllowance' },
+      { id: 'milestone_tv', label: 'TV', value: 'tv' },
+      { id: 'milestone_drip', label: 'Direct Drip', value: 'directDrip' },
+    ];
+    return { message, options };
+  }
+
+  // ── Show customer breakdown for selected milestone ──
+  formatMilestoneBreakdown(
+    data: CommissionData,
+    milestone: MilestoneType
+  ): { message: string; options: MessageOption[] } {
+    const milestoneLabels: Record<MilestoneType, string> = {
+      cds2: 'CDS2',
+      jsf: 'JSF',
+      transportAllowance: 'Transport Allowance',
+      tv: 'TV',
+      directDrip: 'Direct Drip',
+    };
+
+    const milestoneLabel = milestoneLabels[milestone];
+    const total = data.milestoneBreakdown[milestone];
+
+    let message = `${milestoneLabel} Breakdown:\n\nTotal: ${total}\n\n`;
+    
+    // Transport Allowance uses week-based breakdown
+    if (milestone === 'transportAllowance') {
+      const weeks = data.milestoneDetails.transportAllowance;
+      weeks.forEach((week) => {
+        message += `${week.week}: ${week.amount}\n`;
+      });
+    } else {
+      // Other milestones use customer-based breakdown
+      const customers = data.milestoneDetails[milestone];
+      customers.forEach((customer) => {
+        message += `${customer.customer}: ${customer.amount}\n`;
+      });
+    }
+
+    const options: MessageOption[] = [
+      { id: 'see_another_milestone', label: 'See another milestone', value: 'see_another_milestone' },
+      { id: 'back_to_menu', label: 'Back to main menu', value: 'back_to_menu' },
     ];
     return { message, options };
   }
